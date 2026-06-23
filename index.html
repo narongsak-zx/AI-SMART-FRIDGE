@@ -61,15 +61,16 @@
             </button>
         </div>
     </div>
-
+    <!-- ----------------------------------------------------------- -->
+    <!-- สคริปต์ระบบ Firebase (เวอร์ชัน Redirect สำหรับมือถือ/iPad) -->
+    <!-- ----------------------------------------------------------- -->
     <script type="module">
-        // 1. นำเข้าเครื่องมือจาก Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // ⚠️ เปลี่ยนมานำเข้า signInWithRedirect และ getRedirectResult
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         // ==========================================
-        // ⚠️ นำโค้ด firebaseConfig จากเว็บ Firebase มาวางทับตรงนี้ ⚠️
-        // ==========================================
+        // ⚠️ นำโค้ด firebaseConfig ของคุณมาวางตรงนี้ ⚠️
         const firebaseConfig = {
             apiKey: "AIzaSyAfRv303RN5iWlMk1NlZikniymfU4HojCY",
             authDomain: "http://ai-smart-fridge-38b82.firebaseapp.com",
@@ -80,38 +81,38 @@
         };
         // ==========================================
 
-        // 2. เริ่มต้นเปิดระบบ Firebase และระบบยืนยันตัวตน (Auth)
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        // 3. ฟังก์ชันล็อกอินเมื่อกดปุ่ม Google
         const googleBtn = document.getElementById('google-login-btn');
         const googleBtnText = document.getElementById('google-btn-text');
 
-        googleBtn.addEventListener('click', () => {
-            // เปลียนข้อความเป็นสถานะโหลด
-            googleBtnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary mr-2"></i> กำลังเชื่อมต่อ...';
-            
-            // สั่งเปิดหน้าต่าง Google Login
-            signInWithPopup(auth, provider)
-                .then((result) => {
-                    // ล็อกอินสำเร็จ! ดึงข้อมูลผู้ใช้มาแสดง
-                    const user = result.user;
-                    
-                    // (สำหรับทดสอบ) แจ้งเตือนเมื่อสำเร็จ และแสดงชื่อ / UID
-                    alert(`✅ ล็อกอินสำเร็จ!\n\nยินดีต้อนรับคุณ: ${user.displayName}\nUID ของคุณคือ: ${user.uid}`);
-                    
-                    // คืนค่าปุ่มกลับมา (ในระบบจริงตรงนี้จะสั่งเปลี่ยนหน้าไปที่หน้า Home)
-                    googleBtnText.innerText = 'ดำเนินการต่อด้วย Google';
-                })
-                .catch((error) => {
-                    // หากเกิดข้อผิดพลาด
-                    console.error("Login Error: ", error);
-                    alert("❌ เกิดข้อผิดพลาดในการล็อกอิน: " + error.message);
-                    googleBtnText.innerText = 'ดำเนินการต่อด้วย Google';
-                });
+        // 1. ตรวจสอบว่าเพิ่งสลับหน้ากลับมาจาก Google หรือเปล่า?
+        getRedirectResult(auth).then((result) => {
+            if (result) {
+                // ล็อกอินสำเร็จ!
+                const user = result.user;
+                alert(`✅ ล็อกอินสำเร็จ!\n\nยินดีต้อนรับ: ${user.displayName}\nUID ของคุณคือ: ${user.uid}`);
+                
+                // คืนค่าปุ่ม
+                if(googleBtnText) googleBtnText.innerText = 'เข้าสู่ระบบสำเร็จแล้ว';
+            }
+        }).catch((error) => {
+            console.error("Login Error: ", error);
+            alert("❌ เกิดข้อผิดพลาด: " + error.message);
+            if(googleBtnText) googleBtnText.innerText = 'ดำเนินการต่อด้วย Google';
         });
+
+        // 2. เมื่อกดปุ่ม ให้สลับหน้าเว็บไปล็อกอิน (ไม่ใช้ Popup แล้ว)
+        if(googleBtn) {
+            googleBtn.addEventListener('click', () => {
+                googleBtnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary mr-2"></i> กำลังสลับหน้า...';
+                
+                // ⚠️ ใช้คำสั่ง Redirect แทน Popup
+                signInWithRedirect(auth, provider);
+            });
+        }
     </script>
 </body>
 </html>
