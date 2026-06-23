@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI SMART FRIDGE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { primary: '#22C55E', secondary: '#F97316' }, fontFamily: { sans: ['Prompt', 'sans-serif'] } } }
+        }
+    </script>
+    <style>body { background-color: #e2e8f0; }</style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-md h-screen sm:h-[850px] bg-white relative sm:rounded-[2.5rem] shadow-2xl overflow-hidden border-[8px] border-gray-900 flex flex-col">
+        
+        <div class="flex-1 flex flex-col justify-center px-8 relative z-10">
+            <div class="text-center mb-10">
+                <div class="w-20 h-20 bg-[#F0FDF4] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner border border-[#DCFCE7]">
+                    <i class="fa-solid fa-kitchen-set text-4xl text-primary"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 tracking-wide">AI SMART FRIDGE</h1>
+                <p class="text-sm text-gray-500 mt-1.5 font-light">จัดการตู้เย็นให้เป็นเรื่องง่าย ไม่เหลือทิ้ง</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5 ml-1">อีเมล</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="email" placeholder="you@example.com" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5 ml-1">รหัสผ่าน</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="password" placeholder="••••••••" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    </div>
+                </div>
+                
+                <button class="w-full py-3.5 bg-primary hover:bg-green-600 text-white rounded-2xl font-semibold shadow-lg shadow-green-200 transition-all active:scale-95">
+                    เข้าสู่ระบบ
+                </button>
+            </div>
+
+            <div class="flex items-center my-8">
+                <div class="flex-1 border-t border-gray-200"></div>
+                <span class="px-4 text-[11px] text-gray-400 font-medium tracking-wide uppercase">หรือเข้าสู่ระบบด้วย</span>
+                <div class="flex-1 border-t border-gray-200"></div>
+            </div>
+
+            <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3.5 bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-700 rounded-2xl font-medium shadow-sm transition-all active:scale-95">
+                <img src="https://cdn-icons-png.flaticon.com/512/3002/300221.png" class="w-5 h-5" alt="Google Logo">
+                <span id="google-btn-text">ดำเนินการต่อด้วย Google</span>
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // 1. นำเข้าเครื่องมือจาก Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        // ==========================================
+        // ⚠️ นำโค้ด firebaseConfig จากเว็บ Firebase มาวางทับตรงนี้ ⚠️
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfRv303RN5iWlMk1NlZikniymfU4HojCY",
+            authDomain: "http://ai-smart-fridge-38b82.firebaseapp.com",
+            projectId: "ai-smart-fridge-38b82",
+            storageBucket: "ai-smart-fridge-38b82.firebasestorage.app",
+            messagingSenderId: "1047994069305",
+            appId: "1:1047994069305:web:7f6f87b31f8919d07778e8"
+        };
+        // ==========================================
+
+        // 2. เริ่มต้นเปิดระบบ Firebase และระบบยืนยันตัวตน (Auth)
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // 3. ฟังก์ชันล็อกอินเมื่อกดปุ่ม Google
+        const googleBtn = document.getElementById('google-login-btn');
+        const googleBtnText = document.getElementById('google-btn-text');
+
+        googleBtn.addEventListener('click', () => {
+            // เปลียนข้อความเป็นสถานะโหลด
+            googleBtnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary mr-2"></i> กำลังเชื่อมต่อ...';
+            
+            // สั่งเปิดหน้าต่าง Google Login
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // ล็อกอินสำเร็จ! ดึงข้อมูลผู้ใช้มาแสดง
+                    const user = result.user;
+                    
+                    // (สำหรับทดสอบ) แจ้งเตือนเมื่อสำเร็จ และแสดงชื่อ / UID
+                    alert(`✅ ล็อกอินสำเร็จ!\n\nยินดีต้อนรับคุณ: ${user.displayName}\nUID ของคุณคือ: ${user.uid}`);
+                    
+                    // คืนค่าปุ่มกลับมา (ในระบบจริงตรงนี้จะสั่งเปลี่ยนหน้าไปที่หน้า Home)
+                    googleBtnText.innerText = 'ดำเนินการต่อด้วย Google';
+                })
+                .catch((error) => {
+                    // หากเกิดข้อผิดพลาด
+                    console.error("Login Error: ", error);
+                    alert("❌ เกิดข้อผิดพลาดในการล็อกอิน: " + error.message);
+                    googleBtnText.innerText = 'ดำเนินการต่อด้วย Google';
+                });
+        });
+    </script>
+</body>
+</html>
