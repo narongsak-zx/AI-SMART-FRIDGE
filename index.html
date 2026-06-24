@@ -5,16 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI SMART FRIDGE</title>
     
-    <!-- นำเข้า Tailwind CSS และ FontAwesome -->
+    <!-- นำเข้า Tailwind, FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- นำเข้า AI TensorFlow (สแกนกล้องฟรี ไม่ต้องใช้ API Key) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { primary: '#22C55E', secondary: '#F97316', danger: '#EF4444', background: '#F8FAFC' },
+                    colors: { 
+                        primary: '#FF5722', 
+                        primaryLight: '#FF8A65',
+                        primaryBg: '#FBE9E7',
+                        secondary: '#22C55E', 
+                        background: '#F5F5F5',
+                        card: '#FFFFFF'
+                    },
                     fontFamily: { sans: ['Prompt', 'sans-serif'] }
                 }
             }
@@ -24,80 +35,81 @@
     <style>
         body { background-color: #e2e8f0; font-family: 'Prompt', sans-serif; overflow: hidden; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content { display: none; animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .nav-item { color: #cbd5e1; transition: all 0.2s ease-in-out; }
-        .nav-item.active { color: #22C55E; }
-        .nav-item.active i { transform: scale(1.15); }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Modal & Overlay Animations */
+        .nav-item { color: #9CA3AF; transition: all 0.2s ease; }
+        .nav-item.active { color: #FF5722; font-weight: 600; }
+        .nav-item.active i { transform: translateY(-2px); }
+        
+        .floating-scan-btn { 
+            background: linear-gradient(135deg, #FF7043, #FF5722);
+            box-shadow: 0 8px 20px rgba(255, 87, 34, 0.4);
+            transform: translateY(-20px);
+        }
+        
+        #login-overlay { transition: opacity 0.3s ease; backdrop-filter: blur(5px); }
+        #login-content { transition: transform 0.3s ease; transform: translateY(20px); opacity: 0; }
+        #login-overlay.open { opacity: 1; pointer-events: auto; }
+        #login-overlay.open #login-content { transform: translateY(0); opacity: 1; }
+        #login-overlay.closed { opacity: 0; pointer-events: none; }
+        
         #scan-modal { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
         #scan-modal.open { transform: translateY(0); }
-        #login-overlay { transition: opacity 0.4s ease; backdrop-filter: blur(8px); }
-        #login-content { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); transform: scale(0.9); opacity: 0; }
-        #login-overlay.open { opacity: 1; pointer-events: auto; }
-        #login-overlay.open #login-content { transform: scale(1); opacity: 1; }
-        #login-overlay.closed { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
-    <!-- กรอบแอปพลิเคชันหลัก (จำลองขนาดมือถือ) -->
     <div class="w-full max-w-md h-screen sm:h-[850px] bg-background relative sm:rounded-[2.5rem] shadow-2xl overflow-hidden border-[8px] border-gray-900 flex flex-col">
         
         <!-- ========================================== -->
-        <!-- ส่วนที่ 1: ระบบ Authentication Modal (เข้าสู่ระบบ) -->
+        <!-- 1. หน้า Login -->
         <!-- ========================================== -->
-        <div id="login-overlay" class="absolute inset-0 z-50 bg-gray-900/60 flex items-center justify-center px-5 open">
-            <div id="login-content" class="bg-white w-full rounded-[2rem] p-6 shadow-2xl relative overflow-hidden">
+        <div id="login-overlay" class="absolute inset-0 z-50 bg-gradient-to-br from-primary to-orange-600 flex items-end sm:items-center justify-center open">
+            <div id="login-content" class="bg-white w-full h-[85%] sm:h-auto sm:w-[90%] rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl relative flex flex-col">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
                 
-                <!-- วงกลมตกแต่ง -->
-                <div class="absolute -top-16 -right-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
-                <div class="absolute -bottom-16 -left-16 w-32 h-32 bg-secondary/10 rounded-full blur-2xl"></div>
-
-                <div class="text-center mb-6 mt-2 relative z-10">
-                    <div class="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner border border-[#DCFCE7]">
-                        <i class="fa-solid fa-kitchen-set text-3xl text-primary"></i>
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-primaryBg rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-lg">
+                        <i class="fa-solid fa-basket-shopping text-4xl text-primary"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800">AI SMART FRIDGE</h2>
-                    <p class="text-xs text-gray-500 mt-1">เข้าสู่ระบบเพื่อจัดการตู้เย็นของคุณ</p>
+                    <h2 class="text-2xl font-bold text-gray-800">Fresh<span class="text-primary">Fridge</span></h2>
+                    <p class="text-sm text-gray-500 mt-1">จัดการตู้เย็นสไตล์นักช้อป</p>
                 </div>
 
-                <div class="space-y-3 relative z-10">
-                    <!-- Form อีเมล -->
-                    <div>
-                        <div class="relative">
-                            <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400 text-sm"></i>
-                            <input type="email" id="email-input" placeholder="อีเมลของคุณ" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary transition-colors">
-                        </div>
+                <div class="space-y-4 relative z-10 flex-1">
+                    <div class="relative">
+                        <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="email" id="email-input" placeholder="อีเมลของคุณ" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all">
                     </div>
-                    <div>
-                        <div class="relative">
-                            <i class="fa-solid fa-lock absolute left-4 top-3.5 text-gray-400 text-sm"></i>
-                            <input type="password" id="password-input" placeholder="รหัสผ่าน (6 ตัวอักษรขึ้นไป)" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary transition-colors">
-                        </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="password" id="password-input" placeholder="รหัสผ่าน (6 ตัวอักษรขึ้นไป)" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all">
                     </div>
-
                     <div class="flex gap-2 pt-2">
-                        <button id="login-email-btn" class="flex-1 py-3 bg-primary hover:bg-green-600 text-white rounded-xl font-semibold shadow-md transition-all active:scale-95 text-sm">
-                            เข้าสู่ระบบ
+                        <button id="login-email-btn" class="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all flex justify-center items-center">
+                            <span>เข้าสู่ระบบ</span>
                         </button>
-                        <button id="register-email-btn" class="flex-1 py-3 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-semibold shadow-sm transition-all active:scale-95 text-sm">
-                            สมัครสมาชิก
+                        <button id="register-email-btn" class="flex-1 py-3 bg-white border border-primary text-primary rounded-xl font-bold text-sm active:scale-95 transition-all flex justify-center items-center">
+                            <span>สมัครสมาชิก</span>
                         </button>
                     </div>
-
-                    <!-- เส้นคั่น -->
-                    <div class="flex items-center my-4 opacity-70">
-                        <div class="flex-1 border-t border-gray-300"></div>
-                        <span class="px-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider">Or Login With</span>
-                        <div class="flex-1 border-t border-gray-300"></div>
+                    
+                    <div class="flex items-center my-4 opacity-50">
+                        <div class="flex-1 border-t border-gray-400"></div>
+                        <span class="px-3 text-[10px] text-gray-500 uppercase tracking-widest">OR</span>
+                        <div class="flex-1 border-t border-gray-400"></div>
                     </div>
 
-                    <!-- ปุ่ม Google -->
-                    <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-medium shadow-sm transition-all active:scale-95 text-sm">
-                        <img src="https://cdn-icons-png.flaticon.com/512/3002/300221.png" class="w-4 h-4" alt="Google">
+                    <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold shadow-sm active:scale-95 transition-all text-sm">
+                        <!-- โลโก้ Google แบบฝัง SVG ของจริง โหลดได้ 100% -->
+                        <svg class="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
                         <span id="google-btn-text">ดำเนินการต่อด้วย Google</span>
                     </button>
                 </div>
@@ -105,178 +117,137 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- ส่วนที่ 2: แอปพลิเคชันหลัก (UI) -->
+        <!-- 2. Header -->
         <!-- ========================================== -->
-        
-        <!-- Header ด้านบน -->
-        <header id="main-header" class="bg-white px-5 pt-6 pb-3 flex justify-between items-center z-10 shrink-0 shadow-sm relative">
-            <div>
-                <h1 class="text-xl font-bold text-gray-800" id="user-greeting">กำลังโหลด...</h1>
-                <p class="text-sm text-gray-500 mt-0.5" id="header-subtitle">รอสักครู่</p>
-            </div>
-            <button id="logout-btn" class="relative w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-red-50 transition-colors">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </button>
-        </header>
-
-        <!-- พื้นที่แสดงเนื้อหาตรงกลาง -->
-        <main class="overflow-y-auto flex-1 hide-scrollbar pb-24 relative bg-background">
-            
-            <!-- ====== แท็บที่ 1: หน้าแรก (Home) ====== -->
-            <div id="home" class="tab-content active px-5 space-y-5 mt-4">
-                
-                <!-- การ์ดสรุปตู้เย็น -->
-                <div class="bg-[#FFF7ED] border border-[#FFEDD5] rounded-3xl p-4 shadow-sm relative overflow-hidden">
-                    <div class="absolute -right-4 -bottom-4 opacity-10 text-6xl text-secondary"><i class="fa-solid fa-box-open"></i></div>
-                    <div class="flex justify-between items-center mb-4 relative z-10">
-                        <div class="flex items-center gap-2 text-danger font-semibold text-sm">
-                            <i class="fa-solid fa-circle-exclamation"></i>
-                            <span>วัตถุดิบทั้งหมดในตู้เย็น</span>
-                        </div>
-                        <span id="total-items-badge" class="bg-white text-secondary text-xs px-2.5 py-1 rounded-full font-bold shadow-sm">0 รายการ</span>
-                    </div>
-                    
-                    <div id="home-preview-list" class="space-y-2 mb-4 relative z-10">
-                        <!-- แจ้งเตือนของใกล้เสียจำลอง -->
-                        <div class="flex justify-between items-center bg-white/60 p-2 rounded-xl">
-                            <div class="flex items-center gap-2 text-sm"><img src="https://cdn-icons-png.flaticon.com/512/869/869664.png" class="w-6 h-6"> <span class="font-medium text-gray-700">นมสด</span></div>
-                            <span class="text-[10px] text-danger font-semibold bg-red-100 px-2 py-0.5 rounded">หมดอายุพรุ่งนี้</span>
-                        </div>
-                    </div>
-
-                    <button onclick="switchTab('pantry')" class="w-full bg-secondary hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition-colors shadow-sm text-sm relative z-10">
-                        เปิดดูตู้เย็นทั้งหมด
+        <header id="main-header" class="bg-gradient-to-r from-primary to-orange-500 px-5 pt-10 pb-4 z-10 shrink-0 text-white rounded-b-3xl shadow-md">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-xs text-white/80" id="header-subtitle">ส่งมอบความสดใหม่ให้</p>
+                    <h1 class="text-lg font-bold flex items-center gap-2" id="user-greeting">กำลังโหลด... <i class="fa-solid fa-chevron-down text-[10px]"></i></h1>
+                </div>
+                <div class="flex gap-3">
+                    <button id="logout-btn" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
                     </button>
                 </div>
+            </div>
+            <div class="relative" id="header-search-container">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="search-input" placeholder="ค้นหาวัตถุดิบในตู้เย็น..." class="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl text-sm text-gray-800 focus:outline-none shadow-sm">
+            </div>
+        </header>
 
-                <!-- ปุ่มสแกนด่วน -->
-                <div onclick="switchTab('scan')" class="bg-[#F0FDF4] border border-[#DCFCE7] rounded-3xl p-5 flex items-center gap-4 cursor-pointer hover:bg-[#dcfce7] transition-colors shadow-sm">
-                    <div class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center text-2xl shadow-md shrink-0">
-                        <i class="fa-solid fa-camera-viewfinder"></i>
-                    </div>
+        <main class="overflow-y-auto flex-1 hide-scrollbar pb-24 relative bg-background">
+            
+            <!-- ====== หน้า 1: ตู้เย็น ====== -->
+            <div id="pantry" class="tab-content active px-4 pt-4">
+                <div class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl p-4 text-white mb-5 shadow-sm flex justify-between items-center">
                     <div>
-                        <h3 class="font-bold text-primary text-base">สแกนตู้เย็นด้วย AI</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">เพิ่มของเข้าตู้เย็นง่ายๆ แค่ถ่ายรูป</p>
+                        <h3 class="font-bold text-sm">เคลียร์ตู้เย็นรับพอยท์!</h3>
+                        <p class="text-[10px] text-white/80 mt-0.5">ทำอาหารจากของใกล้หมดอายุ</p>
                     </div>
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">🌟</div>
                 </div>
 
-                <!-- เมนูแนะนำเบื้องต้น -->
-                <div>
-                    <div class="flex justify-between items-end mb-3">
-                        <h2 class="font-bold text-gray-800">เมนูแนะนำวันนี้</h2>
-                        <span onclick="switchTab('recipes')" class="text-xs text-primary font-medium cursor-pointer">ดูทั้งหมด <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
-                    </div>
-                    <div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2" id="home-recipes-preview">
-                        <p class="text-xs text-gray-400">กำลังคำนวณเมนูจากตู้เย็น...</p>
+                <div class="flex justify-between items-end mb-3 px-1">
+                    <h2 class="font-bold text-gray-800 text-lg">สินค้าในตู้เย็น</h2>
+                    <span id="total-items-badge" class="text-[10px] font-bold text-primary bg-primaryBg px-2 py-1 rounded-md">0 รายการ</span>
+                </div>
+
+                <div id="pantry-grid" class="grid grid-cols-2 gap-3 pb-5">
+                    <div class="col-span-2 text-center py-10 text-gray-400 text-sm">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังโหลด...
                     </div>
                 </div>
             </div>
 
-            <!-- ====== แท็บที่ 2: สแกน (Scan) ====== -->
+            <!-- ====== หน้า 2: สแกนกล้อง ====== -->
             <div id="scan" class="tab-content h-full bg-black relative">
-                <!-- พื้นหลังกล้องจำลอง -->
-                <img src="https://images.unsplash.com/photo-1588854337236-6889d631faa8?auto=format&fit=crop&w=600&q=80" class="absolute inset-0 w-full h-full object-cover opacity-70">
+                <video id="camera-feed" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
+                <canvas id="capture-canvas" class="hidden"></canvas>
                 
-                <!-- เลเซอร์สแกนเนอร์ -->
-                <div class="absolute inset-x-8 top-32 bottom-48 border-[3px] border-primary/80 rounded-3xl relative overflow-hidden">
-                    <div class="absolute inset-0 border-primary shadow-[0_0_20px_rgba(34,197,94,0.4)]"></div>
-                    <div class="absolute left-0 right-0 h-1 bg-primary shadow-[0_0_15px_rgba(34,197,94,1)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                    <div class="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
+                        <div class="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-3xl"></div>
+                        <div class="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-3xl"></div>
+                        <div class="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-3xl"></div>
+                        <div class="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-3xl"></div>
+                        <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-primary shadow-[0_0_10px_rgba(255,87,34,1)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                    </div>
                 </div>
                 
-                <!-- ปุ่มชัตเตอร์ -->
-                <div class="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-black/90 to-transparent flex flex-col items-center justify-center pb-6">
-                    <div class="flex items-center justify-center w-full mb-3">
-                        <button id="shutter-btn" class="w-16 h-16 bg-white rounded-full border-[5px] border-gray-300 shadow-[0_0_20px_rgba(255,255,255,0.3)] active:scale-90 transition-all flex items-center justify-center"></button>
-                    </div>
-                    <p class="text-white/80 text-[11px] font-medium tracking-wide" id="scan-status">แตะเพื่อให้ AI สแกนวัตถุดิบ</p>
+                <div class="absolute bottom-24 inset-x-0 z-20 flex flex-col items-center">
+                    <button id="shutter-btn" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 transition-all flex items-center justify-center mb-2">
+                        <div class="w-12 h-12 bg-white border border-gray-200 rounded-full"></div>
+                    </button>
+                    <p class="text-white text-xs font-medium drop-shadow-md" id="scan-status">กำลังเตรียม AI ในเครื่อง...</p>
                 </div>
 
-                <!-- ป๊อปอัปผลลัพธ์การสแกน (Modal) -->
-                <div id="scan-modal" class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-20 flex flex-col max-h-[85%]">
-                    <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-4 mb-4"></div>
-                    <div class="text-center px-5 mb-4">
-                        <h2 class="text-lg font-bold text-gray-800">AI ตรวจพบวัตถุดิบ</h2>
-                        <p class="text-xs text-primary font-medium mt-0.5 bg-green-50 w-fit mx-auto px-3 py-1 rounded-full"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> พบ 2 รายการ</p>
+                <!-- ป๊อปอัปผลลัพธ์ -->
+                <div id="scan-modal" class="absolute inset-x-0 bottom-0 bg-background rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-30 flex flex-col max-h-[85%]">
+                    <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-4 mb-3"></div>
+                    <div class="px-5 pb-3 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="font-bold text-gray-800"><i class="fa-solid fa-basket-shopping text-primary mr-1"></i> สินค้าที่สแกนพบ</h2>
+                        <span id="scan-count" class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-md font-bold">0</span>
                     </div>
-                    <div class="flex-1 overflow-y-auto px-5 space-y-3 hide-scrollbar pb-4">
-                        <!-- รายการจำลองที่สแกนเจอ -->
-                        <div class="flex items-center justify-between border border-gray-100 p-3 rounded-2xl bg-gray-50">
-                            <div class="flex items-center gap-4">
-                                <img src="https://cdn-icons-png.flaticon.com/512/837/837560.png" class="w-10 h-10 drop-shadow-sm">
-                                <div><p class="font-semibold text-gray-800 text-sm">ไข่ไก่</p><p class="text-[11px] text-gray-500">10 ฟอง</p></div>
-                            </div>
-                            <div class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs shadow-sm"><i class="fa-solid fa-check"></i></div>
-                        </div>
-                        <div class="flex items-center justify-between border border-gray-100 p-3 rounded-2xl bg-gray-50">
-                            <div class="flex items-center gap-4">
-                                <img src="https://cdn-icons-png.flaticon.com/512/3143/3143643.png" class="w-10 h-10 drop-shadow-sm">
-                                <div><p class="font-semibold text-gray-800 text-sm">เนื้อหมูสับ</p><p class="text-[11px] text-gray-500">1 แพ็ค</p></div>
-                            </div>
-                            <div class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs shadow-sm"><i class="fa-solid fa-check"></i></div>
-                        </div>
-                    </div>
-                    <div class="p-5 bg-white border-t border-gray-100 space-y-3 shrink-0">
-                        <button id="save-scan-btn" class="w-full py-3.5 bg-primary hover:bg-green-600 text-white rounded-xl font-semibold shadow-md flex justify-center items-center transition-colors">
-                            บันทึกเข้าตู้เย็นเลย
-                        </button>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar" id="ai-result-list"></div>
+                    <div class="p-4 bg-white border-t border-gray-200 flex gap-3">
+                        <button id="cancel-scan-btn" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95">ยกเลิก</button>
+                        <button id="save-scan-btn" class="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-[0_4px_10px_rgba(255,87,34,0.3)] active:scale-95 flex justify-center items-center">เพิ่มเข้าตู้เย็น</button>
                     </div>
                 </div>
             </div>
 
-            <!-- ====== แท็บที่ 3: ตู้เย็นของฉัน (Pantry) ====== -->
-            <div id="pantry" class="tab-content bg-white min-h-full px-5 pb-5">
-                <div class="relative pt-6 mb-4">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-9 text-gray-400"></i>
-                    <input type="text" placeholder="ค้นหาวัตถุดิบ..." class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+            <!-- ====== หน้า 3: เมนูอาหาร ====== -->
+            <div id="recipes" class="tab-content px-4 pt-4">
+                <div class="bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl p-4 mb-5 border border-orange-200 flex justify-between items-center">
+                    <div>
+                        <h2 class="font-bold text-orange-800">หิวแล้วใช่มั้ย? 👨‍🍳</h2>
+                        <p class="text-[10px] text-orange-600 mt-0.5">หาเมนูเด็ดจากของในตู้เย็นคุณ</p>
+                    </div>
+                    <button id="fetch-recipes-btn" class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm active:scale-95 transition-all flex items-center justify-center">ค้นหาเลย</button>
                 </div>
                 
-                <!-- หมวดหมู่ -->
-                <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4 pb-1">
-                    <span class="bg-primary text-white px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap">ทั้งหมด</span>
-                    <span class="bg-gray-50 text-gray-500 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-gray-200">เนื้อสัตว์</span>
-                    <span class="bg-gray-50 text-gray-500 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-gray-200">ผัก/ผลไม้</span>
-                </div>
-
-                <!-- ลิสต์รายการวัตถุดิบ (โหลดจาก Firebase) -->
-                <div id="pantry-list" class="space-y-3 relative">
-                    <p class="text-center text-gray-400 mt-10 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูลตู้เย็น...</p>
-                </div>
-            </div>
-
-            <!-- ====== แท็บที่ 4: เมนูอาหาร (Recipes) ====== -->
-            <div id="recipes" class="tab-content px-5 pt-6">
-                <div class="flex justify-between items-end mb-4">
-                    <h2 class="font-bold text-gray-800">เมนูแนะนำวันนี้</h2>
-                    <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> อิงจากตู้เย็นของคุณ</span>
-                </div>
-                
-                <!-- ลิสต์เมนูอาหาร (คำนวณแบบ Real-time) -->
-                <div id="recipe-list" class="space-y-4">
-                    <p class="text-center text-gray-400 mt-10 text-sm">กำลังคำนวณเมนู...</p>
+                <h3 class="font-bold text-gray-800 mb-3 px-1">เมนูแนะนำสำหรับคุณ</h3>
+                <div id="recipe-list" class="space-y-4 pb-4">
+                    <div class="text-center py-10">
+                        <i class="fa-solid fa-utensils text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-xs text-gray-400">กดปุ่มค้นหาเพื่อดูเมนูอร่อยๆ</p>
+                    </div>
                 </div>
             </div>
         </main>
 
-        <!-- แถบนำทางด้านล่าง (Bottom Navigation) -->
-        <nav class="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 flex justify-around py-3 px-2 z-20 pb-safe shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)]">
-            <button onclick="switchTab('home')" id="nav-home" class="nav-item active flex flex-col items-center w-16"><i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">หน้าแรก</span></button>
-            <button onclick="switchTab('scan')" id="nav-scan" class="nav-item flex flex-col items-center w-16"><i class="fa-solid fa-camera-viewfinder text-xl mb-1"></i><span class="text-[10px] font-medium">สแกน</span></button>
-            <button onclick="switchTab('pantry')" id="nav-pantry" class="nav-item flex flex-col items-center w-16"><i class="fa-solid fa-box-open text-xl mb-1"></i><span class="text-[10px] font-medium">ตู้เย็น</span></button>
-            <button onclick="switchTab('recipes')" id="nav-recipes" class="nav-item flex flex-col items-center w-16"><i class="fa-solid fa-utensils text-xl mb-1"></i><span class="text-[10px] font-medium">เมนู</span></button>
+        <!-- ========================================== -->
+        <!-- Bottom Navigation -->
+        <!-- ========================================== -->
+        <nav class="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-end pb-safe h-16 z-20 px-2 rounded-t-2xl shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+            <button onclick="switchTab('pantry')" id="nav-pantry" class="nav-item active flex flex-col items-center w-16 pb-2">
+                <i class="fa-solid fa-box-open text-xl mb-1"></i><span class="text-[10px]">ตู้เย็น</span>
+            </button>
+            <div class="relative w-16 flex justify-center pb-2">
+                <button onclick="switchTab('scan')" id="nav-scan" class="nav-item flex flex-col items-center absolute bottom-2">
+                    <div class="w-14 h-14 rounded-full floating-scan-btn text-white flex items-center justify-center text-2xl border-4 border-background">
+                        <i class="fa-solid fa-barcode"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-600 mt-1">สแกน</span>
+                </button>
+            </div>
+            <button onclick="switchTab('recipes')" id="nav-recipes" class="nav-item flex flex-col items-center w-16 pb-2">
+                <i class="fa-solid fa-utensils text-xl mb-1"></i><span class="text-[10px]">เมนู</span>
+            </button>
         </nav>
     </div>
 
     <!-- ========================================== -->
-    <!-- ระบบการทำงานหลังบ้าน (JavaScript + Firebase) -->
+    <!-- สคริปต์การทำงาน -->
     <!-- ========================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // =========================================================
-        // ⚠️ โค้ดสำคัญ! นำ firebaseConfig จากเว็บ Firebase มาวางตรงนี้ ⚠️
-        // =========================================================
+        // Firebase Config ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyAfRv303RN5iWlMk1NlZikniymfU4HojCY",
             authDomain: "ai-smart-fridge-38b82.firebaseapp.com",
@@ -285,299 +256,304 @@
             messagingSenderId: "1047994069305",
             appId: "1:1047994069305:web:7f6f87b31f8919d07778e8"
         };
-        // =========================================================
 
-        // เริ่มต้นใช้งาน Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        const loginModal = document.getElementById('login-overlay');
         let currentUser = null;
-        let myPantryItems = []; // ตัวแปรเก็บชื่อของในตู้เย็น เพื่อเอาไปคำนวณสูตรอาหาร
+        let myPantryItemsTh = []; 
+        let currentScannedItems = [];
 
-        // -----------------------------------------
-        // 1. ระบบจัดการเข้าสู่ระบบ (Authentication)
-        // -----------------------------------------
+        // 1. ระบบ Authentication
+        const loginModal = document.getElementById('login-overlay');
+        const loginEmailBtn = document.getElementById('login-email-btn');
+        const registerEmailBtn = document.getElementById('register-email-btn');
+        
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
-                // ปิดหน้าต่าง Login
+                currentUser = user; 
                 loginModal.classList.replace('open', 'closed');
-                
-                // อัปเดตชื่อทักทาย
-                const displayName = user.displayName || user.email.split('@')[0];
-                document.getElementById('user-greeting').innerText = `สวัสดี! ${displayName}`;
-                
-                // สั่งโหลดตู้เย็นของยูสเซอร์คนนี้
+                const name = user.displayName || user.email.split('@')[0];
+                document.getElementById('user-greeting').innerHTML = `${name} <i class="fa-solid fa-chevron-down text-[10px]"></i>`;
                 loadPantryData(user.uid);
-            } else {
-                currentUser = null;
-                myPantryItems = []; // เคลียร์ตู้เย็น
-                // เปิดหน้าต่าง Login
-                loginModal.classList.replace('closed', 'open');
+            } else { 
+                currentUser = null; 
+                loginModal.classList.replace('closed', 'open'); 
             }
         });
 
-        // 1.1 สมัครด้วย Email
-        document.getElementById('register-email-btn').addEventListener('click', () => {
-            const email = document.getElementById('email-input').value;
-            const password = document.getElementById('password-input').value;
-            if(!email || password.length < 6) return alert("กรุณากรอกอีเมลและรหัสผ่านให้ครบ 6 ตัวอักษรขึ้นไป");
+        // จัดการ Error ให้แสดงผลเป็นภาษาไทยเข้าใจง่าย
+        function handleAuthError(error) {
+            console.error(error);
+            switch (error.code) {
+                case 'auth/email-already-in-use': return "อีเมลนี้ถูกใช้งานไปแล้วครับ";
+                case 'auth/invalid-email': return "รูปแบบอีเมลไม่ถูกต้อง";
+                case 'auth/weak-password': return "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ";
+                case 'auth/user-not-found': return "ไม่พบผู้ใช้งานนี้ในระบบ";
+                case 'auth/wrong-password': return "รหัสผ่านไม่ถูกต้อง";
+                case 'auth/invalid-credential': return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+                default: return "เกิดข้อผิดพลาด: " + error.message;
+            }
+        }
+
+        // สมัครสมาชิก
+        registerEmailBtn.addEventListener('click', async () => {
+            const e = document.getElementById('email-input').value;
+            const p = document.getElementById('password-input').value;
+            if(!e || p.length < 6) return alert("กรุณากรอกอีเมล และรหัสผ่านอย่างน้อย 6 ตัวอักษร");
             
-            const btn = document.getElementById('register-email-btn');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            createUserWithEmailAndPassword(auth, email, password)
-                .catch(err => { alert("สมัครไม่สำเร็จ: " + err.message); btn.innerText = 'สมัครสมาชิก'; });
-        });
-
-        // 1.2 ล็อกอินด้วย Email
-        document.getElementById('login-email-btn').addEventListener('click', () => {
-            const email = document.getElementById('email-input').value;
-            const password = document.getElementById('password-input').value;
-            if(!email || !password) return alert("กรุณากรอกข้อมูลให้ครบ");
-
-            const btn = document.getElementById('login-email-btn');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            signInWithEmailAndPassword(auth, email, password)
-                .catch(err => { alert("รหัสผ่านผิดพลาด!"); btn.innerText = 'เข้าสู่ระบบ'; });
-        });
-
-        // 1.3 ล็อกอินด้วย Google (แก้ปัญหาระบบบล็อก Popup ของ iPad)
-        document.getElementById('google-login-btn').addEventListener('click', async () => {
-            const btnText = document.getElementById('google-btn-text');
-            btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary mr-2"></i> กำลังเชื่อมต่อ...';
-            
+            registerEmailBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             try {
-                // พยายามเปิด Popup ก่อน
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                if (error.code === 'auth/popup-blocked') {
-                    // ถ้าโดนบล็อก (iPad/Safari) ให้เปลี่ยนเป็นการ Redirect หน้าเว็บแทน
-                    signInWithRedirect(auth, provider);
-                } else {
-                    alert("Error: " + error.message);
-                    btnText.innerText = 'ดำเนินการต่อด้วย Google';
-                }
+                await createUserWithEmailAndPassword(auth, e, p);
+                alert("สมัครสมาชิกสำเร็จ!");
+            } catch (err) {
+                alert(handleAuthError(err));
+            } finally {
+                registerEmailBtn.innerHTML = '<span>สมัครสมาชิก</span>';
             }
         });
 
-        // ดักผลลัพธ์ตอน Redirect กลับมา
-        getRedirectResult(auth).catch(err => console.log(err));
-
-        // 1.4 ออกจากระบบ
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            if(confirm('ต้องการออกจากระบบใช่หรือไม่?')) signOut(auth);
+        // เข้าสู่ระบบ
+        loginEmailBtn.addEventListener('click', async () => {
+            const e = document.getElementById('email-input').value;
+            const p = document.getElementById('password-input').value;
+            if(!e || !p) return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+            
+            loginEmailBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                await signInWithEmailAndPassword(auth, e, p);
+            } catch (err) {
+                alert(handleAuthError(err));
+            } finally {
+                loginEmailBtn.innerHTML = '<span>เข้าสู่ระบบ</span>';
+            }
         });
 
+        // Google Login
+        document.getElementById('google-login-btn').addEventListener('click', () => {
+            document.getElementById('google-btn-text').innerText = "กำลังเชื่อมต่อ...";
+            signInWithRedirect(auth, provider);
+        });
 
-        // -----------------------------------------
-        // 2. ระบบฐานข้อมูลตู้เย็น (Cloud Firestore)
-        // -----------------------------------------
+        getRedirectResult(auth).catch(err => alert("Google Login Error: " + err.message));
+
+        document.getElementById('logout-btn').addEventListener('click', () => { 
+            if(confirm('ต้องการออกจากระบบใช่หรือไม่?')) signOut(auth); 
+        });
+
+        // 2. ระบบตู้เย็น และ Search
         function loadPantryData(uid) {
-            const pantryRef = collection(db, "users", uid, "pantry");
-            
-            // onSnapshot: ดึงข้อมูลและอัปเดตหน้าจอแบบ Real-time
-            onSnapshot(pantryRef, (snapshot) => {
-                const count = snapshot.docs.length;
-                document.getElementById('total-items-badge').innerText = `${count} รายการ`;
+            onSnapshot(collection(db, "users", uid, "pantry"), (snapshot) => {
+                document.getElementById('total-items-badge').innerText = `${snapshot.docs.length} รายการ`;
+                myPantryItemsTh = [];
                 
-                myPantryItems = []; // เคลียร์ของเก่าก่อนนับใหม่
-
-                if (snapshot.empty) {
-                    document.getElementById('pantry-list').innerHTML = `
-                        <div class="text-center text-gray-400 mt-12 bg-gray-50 py-10 rounded-3xl border border-gray-100 border-dashed">
-                            <i class="fa-solid fa-box-open text-5xl mb-4 text-gray-300"></i>
-                            <h3 class="font-semibold text-gray-700">ตู้เย็นว่างเปล่า</h3>
-                            <p class="text-xs mt-1">กดเมนูสแกน เพื่อเพิ่มวัตถุดิบเลย!</p>
-                        </div>`;
-                    renderRecipes(); // โชว์สูตรอาหาร (จะเป็น 0%)
-                    return;
+                if (snapshot.empty) { 
+                    document.getElementById('pantry-grid').innerHTML = `<div class="col-span-2 text-center py-10 bg-white rounded-2xl"><i class="fa-solid fa-box-open text-4xl text-gray-200 mb-2"></i><p class="text-sm text-gray-400">ยังไม่มีสินค้าในตู้เย็น</p></div>`; 
+                    return; 
                 }
-
+                
                 let html = '';
-                snapshot.forEach((docSnap) => {
+                snapshot.forEach(docSnap => {
                     const item = docSnap.data();
-                    myPantryItems.push(item.name); // เก็บชื่อไว้คำนวณเมนู
+                    myPantryItemsTh.push(item.nameTh);
                     
                     html += `
-                        <div class="flex items-center justify-between border border-gray-100 p-3 rounded-2xl bg-white shadow-sm transition-all hover:border-green-200">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
-                                    <img src="${item.imgUrl || 'https://cdn-icons-png.flaticon.com/512/837/837560.png'}" class="w-8 h-8 drop-shadow-sm">
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-semibold text-gray-800">${item.name}</h4>
-                                    <p class="text-[10px] text-gray-500 mt-0.5">${item.quantity} ${item.unit}</p>
+                        <div class="pantry-item bg-card rounded-2xl p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col relative overflow-hidden" data-name="${item.nameTh}">
+                            <div class="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg">Fresh</div>
+                            <div class="text-5xl text-center my-3">${item.emoji || '📦'}</div>
+                            <div class="mt-auto">
+                                <h4 class="text-xs font-bold text-gray-800 line-clamp-1">${item.nameTh}</h4>
+                                <p class="text-[10px] text-gray-400 mb-2">คงเหลือ</p>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-primary font-bold text-sm">${item.quantity}<span class="text-[9px] text-gray-500 ml-0.5">${item.unit}</span></span>
+                                    <div class="flex items-center bg-gray-50 rounded-lg border border-gray-200">
+                                        <button onclick="window.updateItemQty('${docSnap.id}', ${item.quantity}, -1)" class="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-primary"><i class="fa-solid fa-minus text-[8px]"></i></button>
+                                        <button onclick="window.updateItemQty('${docSnap.id}', ${item.quantity}, 1)" class="w-6 h-6 flex items-center justify-center text-primary bg-primaryBg rounded-md m-px"><i class="fa-solid fa-plus text-[8px]"></i></button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
-                                <button onclick="window.updateItemQty('${docSnap.id}', ${item.quantity}, -1)" class="text-gray-400 hover:text-danger hover:bg-red-50 w-6 h-6 rounded-md transition-colors"><i class="fa-solid fa-minus text-[10px]"></i></button>
-                                <span class="text-xs font-bold w-4 text-center text-gray-700">${item.quantity}</span>
-                                <button onclick="window.updateItemQty('${docSnap.id}', ${item.quantity}, 1)" class="text-gray-400 hover:text-primary hover:bg-green-50 w-6 h-6 rounded-md transition-colors"><i class="fa-solid fa-plus text-[10px]"></i></button>
-                            </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
-                document.getElementById('pantry-list').innerHTML = html;
-                
-                // อัปเดตเมนูอาหารทันทีที่มีการเปลี่ยนแปลงตู้เย็น
-                renderRecipes();
+                document.getElementById('pantry-grid').innerHTML = html;
             });
         }
 
-        // ฟังก์ชันบวก/ลบ จำนวนของ (บันทึกขึ้น Cloud)
         window.updateItemQty = async (docId, currentQty, change) => {
-            if(!currentUser) return;
-            const newQty = currentQty + change;
-            const itemRef = doc(db, "users", currentUser.uid, "pantry", docId);
-            
-            if (newQty <= 0) {
-                if(confirm('ลบวัตถุดิบนี้ออกจากตู้เย็นใช่ไหม?')) await deleteDoc(itemRef);
-            } else {
-                await updateDoc(itemRef, { quantity: newQty });
-            }
+            const newQty = currentQty + change; const itemRef = doc(db, "users", currentUser.uid, "pantry", docId);
+            if (newQty <= 0) { if(confirm('ลบสินค้านี้ออกจากตู้เย็น?')) await deleteDoc(itemRef); } else await updateDoc(itemRef, { quantity: newQty });
         };
 
-
-        // -----------------------------------------
-        // 3. ระบบคำนวณเมนูอาหาร (Smart Recipe Matcher)
-        // -----------------------------------------
-        // ฐานข้อมูลสูตรอาหารจำลอง
-        const recipesDb = [
-            { name: 'ไข่ตุ๋นหมูสับ', time: '15 นาที', diff: 'ง่าย', req: ['ไข่ไก่', 'เนื้อหมูสับ'], img: 'https://images.unsplash.com/photo-1614961908687-0b135bb0a3f8?auto=format&fit=crop&w=300&q=80' },
-            { name: 'ผัดกะเพราหมูสับ', time: '10 นาที', diff: 'ปานกลาง', req: ['เนื้อหมูสับ', 'ใบกะเพรา', 'พริก'], img: 'https://images.unsplash.com/photo-1626844131082-256783844137?auto=format&fit=crop&w=300&q=80' },
-            { name: 'ไข่ดาว', time: '5 นาที', diff: 'ง่ายมาก', req: ['ไข่ไก่'], img: 'https://images.unsplash.com/photo-1525385133512-2f3bdd039054?auto=format&fit=crop&w=300&q=80' }
-        ];
-
-        function renderRecipes() {
-            const container = document.getElementById('recipe-list');
-            const previewContainer = document.getElementById('home-recipes-preview'); // หน้าโฮม
-
-            // คำนวณเปอร์เซ็นต์
-            const matchedRecipes = recipesDb.map(recipe => {
-                const ownedCount = recipe.req.filter(r => myPantryItems.includes(r)).length;
-                const matchPercent = Math.round((ownedCount / recipe.req.length) * 100);
-                return { ...recipe, matchPercent, ownedCount };
-            }).sort((a, b) => b.matchPercent - a.matchPercent); // เรียง % มากขึ้นก่อน
-
-            // วาด HTML หน้าเมนู
-            let html = '';
-            let previewHtml = '';
-
-            matchedRecipes.forEach((r, index) => {
-                const isFullMatch = r.matchPercent === 100;
-                const cardClass = isFullMatch ? 'border-green-200 bg-green-50/20' : 'border-gray-100';
-                
-                // โค้ดสำหรับหน้า Recipes
-                html += `
-                <div class="bg-white rounded-3xl p-3 shadow-sm border ${cardClass} flex gap-4 transition-all hover:shadow-md">
-                    <div class="relative w-24 h-24 shrink-0">
-                        <img src="${r.img}" class="w-full h-full object-cover rounded-2xl">
-                        ${isFullMatch ? `<div class="absolute -top-2 -right-2 bg-primary text-white text-[8px] font-bold px-2 py-1 rounded-full shadow-md"><i class="fa-solid fa-star"></i> ทำได้เลย</div>` : ''}
-                    </div>
-                    <div class="flex-1 flex flex-col justify-center">
-                        <h3 class="font-bold text-gray-800 text-sm">${r.name}</h3>
-                        <p class="text-[10px] text-gray-500 mt-1 flex items-center gap-3">
-                            <span><i class="fa-regular fa-clock"></i> ${r.time}</span>
-                            <span><i class="fa-solid fa-fire-burner"></i> ${r.diff}</span>
-                        </p>
-                        <div class="mt-2 flex items-center justify-between">
-                            <span class="text-[10px] text-gray-400">มีวัตถุดิบ ${r.ownedCount}/${r.req.length}</span>
-                            <div class="${isFullMatch ? 'text-primary bg-white border-green-100' : 'text-secondary bg-white border-orange-100'} text-[11px] font-bold py-1 px-2 rounded-lg border shadow-sm">
-                                ${r.matchPercent}% Match
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-
-                // โค้ดสำหรับหน้า Home (พรีวิว 2 อันแรก)
-                if(index < 2) {
-                    previewHtml += `
-                    <div class="bg-white min-w-[160px] rounded-2xl p-3 shadow-sm border ${cardClass}">
-                        <img src="${r.img}" class="w-full h-24 object-cover rounded-xl mb-3">
-                        <h3 class="font-semibold text-gray-800 text-sm truncate">${r.name}</h3>
-                        <p class="text-[10px] ${isFullMatch ? 'text-primary' : 'text-secondary'} font-bold mt-1">Match ${r.matchPercent}%</p>
-                    </div>`;
-                }
+        // ช่องค้นหา (Search)
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            document.querySelectorAll('.pantry-item').forEach(item => {
+                const name = item.getAttribute('data-name').toLowerCase();
+                item.style.display = name.includes(keyword) ? 'flex' : 'none';
             });
-
-            container.innerHTML = html;
-            if(previewContainer) previewContainer.innerHTML = previewHtml;
-        }
-
-
-        // -----------------------------------------
-        // 4. ระบบจำลอง AI สแกนวัตถุดิบ (UI + Firestore)
-        // -----------------------------------------
-        document.getElementById('shutter-btn').addEventListener('click', () => {
-            const btn = document.getElementById('shutter-btn');
-            const status = document.getElementById('scan-status');
-            
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary text-2xl"></i>';
-            status.innerText = 'AI กำลังวิเคราะห์รูปภาพ...';
-            
-            setTimeout(() => {
-                btn.innerHTML = '';
-                status.innerText = 'แตะเพื่อสแกนวัตถุดิบ';
-                document.getElementById('scan-modal').classList.add('open');
-            }, 1500);
         });
 
-        document.getElementById('save-scan-btn').addEventListener('click', async () => {
-            if(!currentUser) return;
-            const btn = document.getElementById('save-scan-btn');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
-            
-            try {
-                const pantryRef = collection(db, "users", currentUser.uid, "pantry");
-                // จำลองเพิ่มของเข้าตู้เย็น 2 อย่าง
-                await addDoc(pantryRef, { name: "ไข่ไก่", quantity: 10, unit: "ฟอง", imgUrl: "https://cdn-icons-png.flaticon.com/512/837/837560.png", createdAt: serverTimestamp() });
-                await addDoc(pantryRef, { name: "เนื้อหมูสับ", quantity: 1, unit: "แพ็ค", imgUrl: "https://cdn-icons-png.flaticon.com/512/3143/3143643.png", createdAt: serverTimestamp() });
-                
-                document.getElementById('scan-modal').classList.remove('open');
-                window.switchTab('pantry'); // เด้งไปหน้าตู้เย็น
-            } catch (error) {
-                alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
-            } finally {
-                btn.innerHTML = 'บันทึกเข้าตู้เย็นเลย';
+        // 3. ระบบกล้อง และ AI สแกนในเครื่อง (TensorFlow.js)
+        let videoStream = null;
+        let aiModel = null;
+        const videoEl = document.getElementById('camera-feed'), statusText = document.getElementById('scan-status');
+
+        const foodDict = {
+            "apple": { th: "แอปเปิล", emoji: "🍎", price: "฿15" }, "banana": { th: "กล้วย", emoji: "🍌", price: "฿10" }, 
+            "orange": { th: "ส้ม", emoji: "🍊", price: "฿12" }, "broccoli": { th: "บรอกโคลี", emoji: "🥦", price: "฿35" },
+            "carrot": { th: "แครอท", emoji: "🥕", price: "฿20" }, "hot dog": { th: "ไส้กรอก", emoji: "🌭", price: "฿40" },
+            "pizza": { th: "พิซซ่า", emoji: "🍕", price: "฿199" }, "donut": { th: "โดนัท", emoji: "🍩", price: "฿29" },
+            "cake": { th: "เค้ก", emoji: "🍰", price: "฿50" }, "bottle": { th: "ขวดน้ำ/นม", emoji: "🍼", price: "฿15" },
+            "bowl": { th: "ชามอาหาร", emoji: "🍲", price: "฿45" }, "cup": { th: "เครื่องดื่ม", emoji: "☕", price: "฿30" }
+        };
+
+        // โหลด AI ให้พร้อมใช้งาน
+        cocoSsd.load().then(model => { 
+            aiModel = model; 
+            if(document.getElementById('nav-scan').classList.contains('active')) {
+                statusText.innerText = "แตะที่วงกลมเพื่อสแกน"; 
             }
         });
 
+        async function startCamera() {
+            try { 
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); 
+                videoEl.srcObject = videoStream; 
+                videoEl.classList.remove('hidden'); 
+                statusText.innerText = aiModel ? "แตะที่วงกลมเพื่อสแกน" : "รอ AI โหลดสักครู่..."; 
+            } catch (e) { 
+                statusText.innerText = "ไม่สามารถเปิดกล้องได้ (หรือบล็อกไว้)"; 
+            }
+        }
+        function stopCamera() { if(videoStream){ videoStream.getTracks().forEach(t => t.stop()); videoEl.classList.add('hidden'); } }
 
-        // -----------------------------------------
-        // 5. ระบบควบคุมเมนูด้านล่าง (Tab Navigation)
-        // -----------------------------------------
-        window.switchTab = function(tabId) {
-            // ซ่อนแท็บเดิม
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            // โชว์แท็บใหม่
-            document.getElementById(tabId).classList.add('active');
-            document.getElementById('nav-' + tabId).classList.add('active');
+        document.getElementById('shutter-btn').addEventListener('click', async () => {
+            if(!videoStream || !aiModel) return;
+            const btn = document.getElementById('shutter-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary text-2xl"></i>';
+            statusText.innerText = 'AI กำลังวิเคราะห์...';
 
-            // เปลี่ยนหน้าตา Header ด้านบน
-            const header = document.getElementById('main-header');
-            if (tabId === 'scan') {
-                header.style.display = 'none'; // หน้าสแกนซ่อน Header เพื่อให้กล้องเต็มจอ
-            } else {
-                header.style.display = 'flex';
-                const titles = { 'home': 'หน้าแรก', 'pantry': 'ตู้เย็นของฉัน', 'recipes': 'เมนูจากตู้เย็น' };
-                
-                if(tabId !== 'home') {
-                    document.getElementById('user-greeting').innerText = titles[tabId];
-                    document.getElementById('header-subtitle').innerText = 'จัดการและค้นหาเมนู';
-                } else if(currentUser) {
-                    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
-                    document.getElementById('user-greeting').innerText = `สวัสดี! ${displayName}`;
-                    document.getElementById('header-subtitle').innerText = 'วันนี้ทำอะไรกินดี?';
+            try {
+                // ให้ AI สแกนภาพจากวิดีโอ
+                const predictions = await aiModel.detect(videoEl);
+                stopCamera();
+                currentScannedItems = [];
+
+                predictions.forEach(pred => {
+                    const found = foodDict[pred.class];
+                    // กรองเอาเฉพาะอันที่มีในพจนานุกรมของเรา
+                    if(found && !currentScannedItems.some(i => i.nameTh === found.th)) {
+                        currentScannedItems.push({ nameTh: found.th, quantity: 1, unit: "ชิ้น", emoji: found.emoji, price: found.price });
+                    }
+                });
+
+                if(currentScannedItems.length === 0) {
+                    document.getElementById('scan-count').innerText = "0";
+                    document.getElementById('ai-result-list').innerHTML = "<div class='text-center py-4 text-gray-500 text-xs'>ไม่พบสินค้าอาหาร กรุณาลองใหม่</div>";
+                } else {
+                    document.getElementById('scan-count').innerText = currentScannedItems.length;
+                    document.getElementById('ai-result-list').innerHTML = currentScannedItems.map(item => `
+                        <div class="flex items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center text-2xl mr-3">${item.emoji}</div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-bold text-gray-800">${item.nameTh}</h4>
+                                <p class="text-[10px] text-gray-400">ราคาประเมิน <span class="text-primary font-bold">${item.price}</span></p>
+                            </div>
+                            <div class="w-6 h-6 rounded-full bg-green-100 text-green-500 flex items-center justify-center text-[10px]"><i class="fa-solid fa-check"></i></div>
+                        </div>`).join('');
                 }
+                document.getElementById('scan-modal').classList.add('open');
+
+            } catch (err) { 
+                alert("เกิดข้อผิดพลาดในการสแกน"); 
+                startCamera(); 
+            } finally { 
+                btn.innerHTML = '<div class="w-12 h-12 bg-white border border-gray-200 rounded-full"></div>'; 
+                statusText.innerText = 'แตะที่วงกลมเพื่อสแกน'; 
+            }
+        });
+
+        document.getElementById('cancel-scan-btn').addEventListener('click', () => { document.getElementById('scan-modal').classList.remove('open'); startCamera(); });
+        
+        document.getElementById('save-scan-btn').addEventListener('click', async () => {
+            if(currentScannedItems.length === 0) return;
+            const btn = document.getElementById('save-scan-btn'); 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                for (const item of currentScannedItems) {
+                    const { price, ...saveData } = item; // ไม่ต้องเซฟราคาลงฐานข้อมูล
+                    await addDoc(collection(db, "users", currentUser.uid, "pantry"), { ...saveData, createdAt: serverTimestamp() });
+                }
+                document.getElementById('scan-modal').classList.remove('open'); 
+                switchTab('pantry');
+            } catch (e) { 
+                alert("เกิดข้อผิดพลาดในการบันทึก"); 
+            } finally { 
+                btn.innerHTML = 'เพิ่มเข้าตู้เย็น'; 
+            }
+        });
+
+        // 4. ระบบสูตรอาหาร (ไม่ต้องต่อเน็ต)
+        const thaiRecipesDB = [
+            { title: "ข้าวกะเพราไส้กรอก", shop: "เจ๊โอว ตามสั่ง", time: "10 นาที", img: "https://images.unsplash.com/photo-1626844131082-256783844137?auto=format&fit=crop&w=300&q=80", req: ["ไส้กรอก"], tag: "ยอดฮิต" },
+            { title: "สลัดผลไม้เพื่อสุขภาพ", shop: "Healthy Bowl", time: "5 นาที", img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&q=80", req: ["แอปเปิล", "ส้ม", "กล้วย"], tag: "คลีน" },
+            { title: "บรอกโคลีผัดน้ำมันหอย", shop: "ครัวคุณยาย", time: "15 นาที", img: "https://images.unsplash.com/photo-1556805178-013da21d2fb7?auto=format&fit=crop&w=300&q=80", req: ["บรอกโคลี"], tag: "มีประโยชน์" },
+            { title: "น้ำส้มคั้นสด", shop: "Fresh Juice", time: "5 นาที", img: "https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=300&q=80", req: ["ส้ม"], tag: "สดชื่น" }
+        ];
+
+        document.getElementById('fetch-recipes-btn').addEventListener('click', () => {
+            const btn = document.getElementById('fetch-recipes-btn');
+            const list = document.getElementById('recipe-list');
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            list.innerHTML = '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin text-primary text-2xl"></i></div>';
+            
+            setTimeout(() => {
+                const matched = thaiRecipesDB.map(r => {
+                    const owned = r.req.filter(reqItem => myPantryItemsTh.includes(reqItem)).length;
+                    return { ...r, matchPercent: Math.round((owned / r.req.length) * 100) };
+                }).filter(r => r.matchPercent > 0).sort((a, b) => b.matchPercent - a.matchPercent);
+
+                if(matched.length === 0) { 
+                    list.innerHTML = `<p class="text-center text-gray-500 text-sm">เสียใจด้วยครับ ไม่มีวัตถุดิบพอทำเมนูไหนเลย</p>`; 
+                } else {
+                    list.innerHTML = matched.map(r => `
+                        <div class="bg-white rounded-2xl p-3 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-100 flex gap-3 relative overflow-hidden active:scale-95 transition-transform">
+                            ${r.matchPercent === 100 ? `<div class="absolute top-2 left-2 z-10 bg-primary text-white text-[8px] font-bold px-2 py-0.5 rounded-md shadow-sm">ทำได้เลย!</div>` : ''}
+                            <img src="${r.img}" class="w-20 h-20 object-cover rounded-xl shrink-0">
+                            <div class="flex-1 flex flex-col justify-center">
+                                <h3 class="font-bold text-gray-800 text-sm leading-tight">${r.title}</h3>
+                                <p class="text-[10px] text-gray-400 mt-1"><i class="fa-solid fa-store"></i> ${r.shop} • ${r.time}</p>
+                                <p class="text-[9px] text-gray-400 mt-0.5">ใช้: ${r.req.join(', ')}</p>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <span class="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">${r.tag}</span>
+                                    <span class="text-[10px] ${r.matchPercent===100 ? 'text-primary font-bold' : 'text-orange-500'} bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">${r.matchPercent}% Match</span>
+                                </div>
+                            </div>
+                        </div>`).join('');
+                }
+                btn.innerHTML = 'ค้นหาเลย';
+            }, 600);
+        });
+
+        // 5. Navigation Tabs
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content, .nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active'); 
+            document.getElementById('nav-' + tabId).classList.add('active');
+            
+            const h = document.getElementById('main-header');
+            const search = document.getElementById('header-search-container');
+            
+            if (tabId === 'scan') { 
+                h.style.display = 'none'; startCamera(); 
+            } else { 
+                h.style.display = 'block'; stopCamera(); 
+                if(tabId === 'recipes') search.style.display = 'none'; else search.style.display = 'block';
             }
         }
     </script>
 </body>
 </html>
-
 
