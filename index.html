@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI SMART FRIDGE</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,7 +21,7 @@
     </script>
 
     <style>
-        body { background-color: #e2e8f0; }
+        body { background-color: #e2e8f0; font-family: 'Prompt', sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
@@ -38,19 +38,54 @@
     <div class="w-full max-w-md h-screen sm:h-[850px] bg-background relative sm:rounded-[2.5rem] shadow-2xl overflow-hidden border-[8px] border-gray-900 flex flex-col">
         
         <!-- ========================================== -->
-        <!-- ส่วนที่ 1: หน้า Login (จะโชว์ตอนยังไม่เข้าสู่ระบบ) -->
+        <!-- ส่วนที่ 1: หน้า Auth (เข้าสู่ระบบ / สมัครสมาชิก) -->
         <!-- ========================================== -->
-        <div id="login-view" class="flex-1 flex flex-col justify-center px-8 relative z-20 bg-white h-full absolute inset-0">
-            <div class="text-center mb-10">
-                <div class="w-20 h-20 bg-[#F0FDF4] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner border border-[#DCFCE7]">
+        <div id="auth-view" class="flex-1 flex flex-col justify-center px-8 relative z-20 bg-white h-full absolute inset-0 overflow-y-auto pb-10">
+            <div class="text-center mb-8 mt-8">
+                <div class="w-20 h-20 bg-[#F0FDF4] rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-[#DCFCE7]">
                     <i class="fa-solid fa-kitchen-set text-4xl text-primary"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-800 tracking-wide">AI SMART FRIDGE</h1>
-                <p class="text-sm text-gray-500 mt-1.5 font-light">จัดการตู้เย็นให้เป็นเรื่องง่าย ไม่เหลือทิ้ง</p>
+                <p class="text-sm text-gray-500 mt-1 font-light">จัดการตู้เย็นให้เป็นเรื่องง่าย ไม่เหลือทิ้ง</p>
             </div>
             
+            <!-- ฟอร์มอีเมลและรหัสผ่าน -->
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1 ml-1">อีเมล</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="email" id="email-input" placeholder="you@example.com" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1 ml-1">รหัสผ่าน (6 ตัวอักษรขึ้นไป)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                        <input type="password" id="password-input" placeholder="••••••••" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                    </div>
+                </div>
+
+                <!-- ปุ่ม Login / Register แบบ Email -->
+                <div class="flex gap-3 pt-2">
+                    <button id="login-email-btn" class="flex-1 py-3 bg-primary hover:bg-green-600 text-white rounded-2xl font-semibold shadow-md transition-all active:scale-95 text-sm">
+                        เข้าสู่ระบบ
+                    </button>
+                    <button id="register-email-btn" class="flex-1 py-3 bg-white border-2 border-primary text-primary hover:bg-green-50 rounded-2xl font-semibold shadow-sm transition-all active:scale-95 text-sm">
+                        สมัครสมาชิก
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center my-6">
+                <div class="flex-1 border-t border-gray-200"></div>
+                <span class="px-3 text-[11px] text-gray-400 font-medium uppercase">หรือ</span>
+                <div class="flex-1 border-t border-gray-200"></div>
+            </div>
+
+            <!-- ปุ่ม Google Login -->
             <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3.5 bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-700 rounded-2xl font-medium shadow-sm transition-all active:scale-95">
-                <img src="https://cdn-icons-png.flaticon.com/512/3002/300221.png" class="w-5 h-5" alt="Google Logo">
+                <img src="https://cdn-icons-png.flaticon.com/512/3002/300221.png" class="w-5 h-5" alt="Google">
                 <span id="google-btn-text">ดำเนินการต่อด้วย Google</span>
             </button>
         </div>
@@ -60,13 +95,11 @@
         <!-- ========================================== -->
         <div id="app-view" class="hidden flex-col h-full w-full absolute inset-0 z-10 bg-background">
             
-            <!-- Header -->
             <header id="main-header" class="bg-white px-5 pt-6 pb-3 flex justify-between items-center z-10 shrink-0 shadow-sm">
                 <div>
                     <h1 class="text-xl font-bold text-gray-800" id="user-greeting">สวัสดี! ...</h1>
                     <p class="text-sm text-gray-500 mt-0.5" id="header-subtitle">วันนี้ทำอะไรกินดี?</p>
                 </div>
-                <!-- ปุ่ม Logout -->
                 <button id="logout-btn" class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-red-50 transition-colors">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -82,7 +115,7 @@
                                 <i class="fa-solid fa-circle-exclamation"></i>
                                 <span>ภาพรวมตู้เย็นของคุณ</span>
                             </div>
-                            <span id="total-items-badge" class="bg-[#FFEDD5] text-secondary text-xs px-2.5 py-1 rounded-full font-medium">โหลดข้อมูล...</span>
+                            <span id="total-items-badge" class="bg-[#FFEDD5] text-secondary text-xs px-2.5 py-1 rounded-full font-medium">0 รายการ</span>
                         </div>
                         <button onclick="switchTab('pantry')" class="w-full bg-secondary hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition-colors shadow-sm text-sm">
                             จัดการตู้เย็น
@@ -122,7 +155,6 @@
                             <p class="text-sm text-gray-500">พบ 1 รายการใหม่!</p>
                         </div>
                         <div class="flex-1 overflow-y-auto px-5 space-y-3 hide-scrollbar pb-4">
-                            <!-- จำลองเจอไข่ไก่ -->
                             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                                 <div class="flex items-center gap-4">
                                     <img src="https://cdn-icons-png.flaticon.com/512/837/837560.png" class="w-10 h-10">
@@ -145,13 +177,12 @@
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-9 text-gray-400"></i>
                         <input type="text" placeholder="ค้นหาวัตถุดิบ..." class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-primary">
                     </div>
-                    <!-- พื้นที่แสดงข้อมูลจาก Firebase -->
                     <div id="pantry-list" class="space-y-4 relative">
-                        <p class="text-center text-gray-400 mt-10 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูลตู้เย็น...</p>
+                        <p class="text-center text-gray-400 mt-10 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูลตู้เย็น...</p>
                     </div>
                 </div>
 
-                <!-- หน้า 4: Recipes (จำลองไว้ก่อน) -->
+                <!-- หน้า 4: Recipes -->
                 <div id="recipes" class="tab-content px-5 pt-6">
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
                         <i class="fa-solid fa-utensils text-4xl text-gray-300 mb-3"></i>
@@ -159,10 +190,8 @@
                         <p class="text-xs text-gray-500 mt-1">จะเปิดใช้งานใน Phase ถัดไป (AI API)</p>
                     </div>
                 </div>
-
             </main>
 
-            <!-- Bottom Navigation -->
             <nav class="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around py-3 px-2 z-20 pb-safe">
                 <button onclick="switchTab('home')" id="nav-home" class="nav-item active flex flex-col items-center w-16"><i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">หน้าแรก</span></button>
                 <button onclick="switchTab('scan')" id="nav-scan" class="nav-item flex flex-col items-center w-16"><i class="fa-solid fa-camera text-xl mb-1"></i><span class="text-[10px] font-medium">สแกน</span></button>
@@ -173,12 +202,12 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- สคริปต์ควบคุมระบบ Firebase และ UI -->
+    <!-- สคริปต์ควบคุม Firebase และ UI -->
     <!-- ========================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // ⚠️ นำเข้าเครื่องมือจัดการฐานข้อมูล Firestore
+        // เพิ่มฟังก์ชันสมัครและเข้าสู่ระบบด้วยอีเมล
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // ==========================================
@@ -193,77 +222,106 @@
         };
         // ==========================================
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // UI Elements
-        const loginView = document.getElementById('login-view');
+        const authView = document.getElementById('auth-view');
         const appView = document.getElementById('app-view');
-        const googleBtn = document.getElementById('google-login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userGreeting = document.getElementById('user-greeting');
-        const pantryList = document.getElementById('pantry-list');
-        const totalItemsBadge = document.getElementById('total-items-badge');
-
+        
         let currentUser = null;
 
-        // 1. ตรวจสอบสถานะการล็อกอิน (Real-time Auth Listener)
+        // --- ระบบ Authentication ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // ถ้าล็อกอินแล้ว: ซ่อนหน้า Login, โชว์หน้า App
                 currentUser = user;
-                loginView.classList.add('hidden');
+                authView.classList.add('hidden');
                 appView.classList.replace('hidden', 'flex');
                 
-                // อัปเดตชื่อผู้ใช้
-                userGreeting.innerText = `สวัสดี! ${user.displayName.split(' ')[0]}`;
+                // ถ้ายูสเซอร์ไม่มีชื่อ (เช่นสมัครด้วยอีเมล) ให้ดึงชื่อจากอีเมลท่อนแรกมาใช้
+                const displayName = user.displayName || user.email.split('@')[0];
+                document.getElementById('user-greeting').innerText = `สวัสดี! ${displayName}`;
                 
-                // โหลดข้อมูลตู้เย็นของคนนี้
                 loadPantryData(user.uid);
             } else {
-                // ถ้ายังไม่ล็อกอิน: โชว์หน้า Login, ซ่อนหน้า App
                 currentUser = null;
-                loginView.classList.remove('hidden');
+                authView.classList.remove('hidden');
                 appView.classList.replace('flex', 'hidden');
-                document.getElementById('google-btn-text').innerText = 'ดำเนินการต่อด้วย Google';
             }
         });
 
-        // 2. ฟังก์ชัน Login
-        googleBtn.addEventListener('click', () => {
+        // 1. สมัครสมาชิกด้วยอีเมล
+        document.getElementById('register-email-btn').addEventListener('click', () => {
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            if(!email || password.length < 6) {
+                alert("กรุณากรอกอีเมลและรหัสผ่านให้ครบ 6 ตัวอักษรขึ้นไป"); return;
+            }
+            
+            document.getElementById('register-email-btn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    alert("สมัครสมาชิกสำเร็จ!");
+                    document.getElementById('register-email-btn').innerText = 'สมัครสมาชิก';
+                })
+                .catch((error) => {
+                    alert("สมัครสมาชิกไม่สำเร็จ: " + error.message);
+                    document.getElementById('register-email-btn').innerText = 'สมัครสมาชิก';
+                });
+        });
+
+        // 2. เข้าสู่ระบบด้วยอีเมล
+        document.getElementById('login-email-btn').addEventListener('click', () => {
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            if(!email || !password) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วน"); return;
+            }
+
+            document.getElementById('login-email-btn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    document.getElementById('login-email-btn').innerText = 'เข้าสู่ระบบ';
+                })
+                .catch((error) => {
+                    alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+                    document.getElementById('login-email-btn').innerText = 'เข้าสู่ระบบ';
+                });
+        });
+
+        // 3. เข้าสู่ระบบด้วย Google
+        document.getElementById('google-login-btn').addEventListener('click', () => {
             document.getElementById('google-btn-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary mr-2"></i> กำลังสลับหน้า...';
             signInWithRedirect(auth, provider);
         });
 
-        // 3. ฟังก์ชัน Logout
-        logoutBtn.addEventListener('click', () => {
-            if(confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-                signOut(auth);
-            }
+        // เช็คผลจากการกลับมาจากหน้า Google (ถ้ามี)
+        getRedirectResult(auth).catch((error) => {
+            alert("ข้อผิดพลาดจาก Google Login: " + error.message);
+            document.getElementById('google-btn-text').innerText = 'ดำเนินการต่อด้วย Google';
         });
 
-        // 4. โหลดข้อมูลตู้เย็นแบบ Real-time จาก Firestore
+        // 4. ออกจากระบบ
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            if(confirm('ต้องการออกจากระบบใช่หรือไม่?')) signOut(auth);
+        });
+
+
+        // --- ระบบฐานข้อมูล Firestore ---
         function loadPantryData(uid) {
-            // อ้างอิงไปที่โฟลเดอร์: users -> [UID ของคุณ] -> pantry
             const pantryRef = collection(db, "users", uid, "pantry");
-            
-            // onSnapshot คือการดึงข้อมูลแบบ Real-time ถ้ามีคนแก้ Database แอปจะอัปเดตเองทันที
             onSnapshot(pantryRef, (snapshot) => {
-                totalItemsBadge.innerText = `มี ${snapshot.docs.length} รายการ`;
+                document.getElementById('total-items-badge').innerText = `${snapshot.docs.length} รายการ`;
                 
                 if (snapshot.empty) {
-                    pantryList.innerHTML = `<div class="text-center text-gray-400 mt-10"><i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i><p>ตู้เย็นว่างเปล่า<br>ลองสแกนเพื่อเพิ่มวัตถุดิบดูสิ!</p></div>`;
+                    document.getElementById('pantry-list').innerHTML = `<div class="text-center text-gray-400 mt-10"><i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i><p>ตู้เย็นว่างเปล่า<br>ลองสแกนเพื่อเพิ่มวัตถุดิบดูสิ!</p></div>`;
                     return;
                 }
 
                 let html = '';
-                snapshot.forEach((document) => {
-                    const item = document.data();
-                    const docId = document.id; // รหัสเอกสาร (ใช้เวลาอัปเดต/ลบ)
-                    
+                snapshot.forEach((docSnap) => {
+                    const item = docSnap.data();
                     html += `
                         <div class="flex items-center justify-between border-b border-gray-100 pb-3 bg-white">
                             <div class="flex items-center gap-4">
@@ -276,77 +334,56 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
-                                <button onclick="window.updateItemQty('${docId}', ${item.quantity}, -1)" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                                <button onclick="window.updateItemQty('${docSnap.id}', ${item.quantity}, -1)" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-minus text-[10px]"></i></button>
                                 <span class="text-xs font-semibold w-3 text-center">${item.quantity}</span>
-                                <button onclick="window.updateItemQty('${docId}', ${item.quantity}, 1)" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                                <button onclick="window.updateItemQty('${docSnap.id}', ${item.quantity}, 1)" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-plus text-[10px]"></i></button>
                             </div>
                         </div>
                     `;
                 });
-                pantryList.innerHTML = html;
+                document.getElementById('pantry-list').innerHTML = html;
             });
         }
 
-        // 5. ฟังก์ชันเพิ่ม/ลด จำนวนของในตู้เย็น (บันทึกขึ้น Firestore)
         window.updateItemQty = async (docId, currentQty, change) => {
             if(!currentUser) return;
             const newQty = currentQty + change;
             const itemRef = doc(db, "users", currentUser.uid, "pantry", docId);
-            
-            if (newQty <= 0) {
-                // ถ้าจำนวนเป็น 0 ให้ลบออกจากฐานข้อมูล
-                await deleteDoc(itemRef);
-            } else {
-                // อัปเดตจำนวนใหม่
-                await updateDoc(itemRef, { quantity: newQty });
-            }
+            if (newQty <= 0) await deleteDoc(itemRef);
+            else await updateDoc(itemRef, { quantity: newQty });
         };
 
-        // 6. ระบบสแกนจำลอง -> บันทึกเข้า Firestore
-        const shutterBtn = document.getElementById('shutter-btn');
-        const scanModal = document.getElementById('scan-modal');
-        const saveScanBtn = document.getElementById('save-scan-btn');
 
-        shutterBtn.addEventListener('click', () => {
-            shutterBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary text-2xl"></i>';
+        // --- UI & การจำลองการสแกน ---
+        document.getElementById('shutter-btn').addEventListener('click', () => {
+            document.getElementById('shutter-btn').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary text-2xl"></i>';
             setTimeout(() => {
-                shutterBtn.innerHTML = '';
-                scanModal.classList.add('open');
+                document.getElementById('shutter-btn').innerHTML = '';
+                document.getElementById('scan-modal').classList.add('open');
             }, 1000);
         });
 
-        saveScanBtn.addEventListener('click', async () => {
+        document.getElementById('save-scan-btn').addEventListener('click', async () => {
             if(!currentUser) return;
-            saveScanBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
+            const btn = document.getElementById('save-scan-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
             
             try {
-                // เพิ่มข้อมูล "ไข่ไก่" ขึ้น Firestore
-                const pantryRef = collection(db, "users", currentUser.uid, "pantry");
-                await addDoc(pantryRef, {
+                await addDoc(collection(db, "users", currentUser.uid, "pantry"), {
                     name: "ไข่ไก่",
                     quantity: 5,
                     unit: "ฟอง",
                     imgUrl: "https://cdn-icons-png.flaticon.com/512/837/837560.png",
                     timestamp: new Date()
                 });
-                
-                // ปิด Modal และเด้งไปหน้าตู้เย็น
-                scanModal.classList.remove('open');
+                document.getElementById('scan-modal').classList.remove('open');
                 window.switchTab('pantry');
             } catch (error) {
-                console.error("Error adding document: ", error);
-                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+                alert("เกิดข้อผิดพลาดในการบันทึก");
             } finally {
-                saveScanBtn.innerHTML = 'บันทึกเข้าตู้เย็น';
+                btn.innerHTML = 'บันทึกเข้าตู้เย็น';
             }
         });
-
-        // 7. ระบบ Tab สลับหน้า
-        const headerTitles = {
-            'home': `<h1 class="text-xl font-bold text-gray-800" id="user-greeting">สวัสดี!</h1><p class="text-sm text-gray-500 mt-0.5">วันนี้ทำอะไรกินดี?</p>`,
-            'pantry': `<h1 class="text-xl font-bold text-gray-800">ตู้เย็นของฉัน</h1><p class="text-sm text-gray-500 mt-0.5">จัดการวัตถุดิบ</p>`,
-            'recipes': `<h1 class="text-xl font-bold text-gray-800">เมนูแนะนำ</h1><p class="text-sm text-gray-500 mt-0.5">จากของในตู้เย็น</p>`
-        };
 
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -359,14 +396,19 @@
                 header.style.display = 'none';
             } else {
                 header.style.display = 'flex';
-                const titleDiv = header.querySelector('div');
-                titleDiv.innerHTML = headerTitles[tabId];
-                if(tabId === 'home' && currentUser) {
-                    document.getElementById('user-greeting').innerText = `สวัสดี! ${currentUser.displayName.split(' ')[0]}`;
+                const titles = {
+                    'home': 'หน้าแรก', 'pantry': 'ตู้เย็นของฉัน', 'recipes': 'เมนูแนะนำ'
+                };
+                if(tabId !== 'home') {
+                    document.getElementById('user-greeting').innerText = titles[tabId];
+                    document.getElementById('header-subtitle').innerText = '';
+                } else if(currentUser) {
+                    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+                    document.getElementById('user-greeting').innerText = `สวัสดี! ${displayName}`;
+                    document.getElementById('header-subtitle').innerText = 'วันนี้ทำอะไรกินดี?';
                 }
             }
         }
     </script>
 </body>
 </html>
-
